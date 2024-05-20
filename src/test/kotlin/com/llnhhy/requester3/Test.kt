@@ -1,6 +1,7 @@
 package com.llnhhy.requester3
 
 import com.llnhhy.requester3.config.ConfigBuilder
+import com.llnhhy.requester3.config.Timeout
 import com.llnhhy.requester3.request.*
 import com.llnhhy.requester3.response.Response
 import com.llnhhy.requester3.transformation.*
@@ -29,12 +30,16 @@ fun newCachedThreadPoolCoroutineDispatcher(coreSize: Int, name: String): Executo
 }
 
 fun main() {
-    val user = RequestBuilder.newBuilder()
-        .url("user/info")
-        .appendParam("id", 12345)
-        .build()
-        .call()
-        .transformTo(typeOf<User>())
+    runBlocking {
+        val user = RequestBuilder.newBuilder()
+            .url("user/info")
+            .get()
+            .appendParam("id", 12345)
+            .build()
+            .call()
+            .transformTo(typeOf<User>())
+    }
+
 
 //    val a = ThreadPoolExecutor(
 //        8, 10,

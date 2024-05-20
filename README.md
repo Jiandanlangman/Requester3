@@ -2,10 +2,10 @@
 
 
 ### 快速上手
-任选一种请求方式即可。</br>
-必须在suspend代码块中执行同步请求。
+任选一种请求方式即可。
+#### 同步请求
+同步请求必须在suspend代码块中执行。
 ```kotlin
-//kotlin同步请求
 val user = RequestBuilder.newBuilder()
     .url("user/info")
     .get()
@@ -17,11 +17,14 @@ val user = RequestBuilder.newBuilder()
 
 //DSL同步请求
 HttpGet from "user/info" where {
-        query { "id" to 12345 }
-    } sync call transformTo typeOf<UserInfo>()
+    query { "id" to 12345 }
+} sync call transformTo typeOf<UserInfo>()
 
-
-//kotlin异步请求
+```
+#### 异步请求
+异步请求返回线程是Requester内部线程而非调用者线程；如果需要切换回调用者线程，可以手动切换。
+```kotlin
+//kotlin
 RequestBuilder.newBuilder()
     .url("user/info")
     .get()
