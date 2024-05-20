@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.HashMap
 
 
-fun newCachedThreadPoolCoroutineDispatcher(coreSize:Int, name:String) : ExecutorCoroutineDispatcher {
+fun newCachedThreadPoolCoroutineDispatcher(coreSize: Int, name: String): ExecutorCoroutineDispatcher {
     val threadNo = AtomicInteger()
 
     return ThreadPoolExecutor(
@@ -21,7 +21,7 @@ fun newCachedThreadPoolCoroutineDispatcher(coreSize:Int, name:String) : Executor
         10L, TimeUnit.SECONDS,
         LinkedBlockingDeque(),
         ThreadFactory {
-            Thread(it,  "CoilCustomFetcherDispatcher-${threadNo.incrementAndGet()}").apply {
+            Thread(it, "CoilCustomFetcherDispatcher-${threadNo.incrementAndGet()}").apply {
                 isDaemon = true
             }
         }
@@ -29,6 +29,12 @@ fun newCachedThreadPoolCoroutineDispatcher(coreSize:Int, name:String) : Executor
 }
 
 fun main() {
+    val user = RequestBuilder.newBuilder()
+        .url("user/info")
+        .appendParam("id", 12345)
+        .build()
+        .call()
+        .transformTo(typeOf<User>())
 
 //    val a = ThreadPoolExecutor(
 //        8, 10,
@@ -118,28 +124,28 @@ private fun testRequest() {
 //            println(it)
 //        }
     )
- repeat(200) {
-     runBlocking {
-         val response = HttpGet from  "https://www.baidu.com/" prohibit {
-             RequestEntity.PROHIBIT_FLAG_ALL_EXCLUDE_RESPONSE_INTERCEPTOR
-         } where {
+    repeat(200) {
+        runBlocking {
+            val response = HttpGet from "https://www.baidu.com/" prohibit {
+                RequestEntity.PROHIBIT_FLAG_ALL_EXCLUDE_RESPONSE_INTERCEPTOR
+            } where {
 
-         }   enqueue {
-             println(it.body?.dataStr)
+            } enqueue {
+                println(it.body?.dataStr)
 
-         }
+            }
 //        val response = RequestBuilder.newBuilder()
 //            .url("https://www.baidu.com")
 //            .get()
 //            .build().call()
-     }
- }
+        }
+    }
     runBlocking {
         delay(5 * 1000)
     }
 }
 
-private  fun testTransform() {
+private fun testTransform() {
 
 
     val data = """
@@ -152,9 +158,10 @@ private  fun testTransform() {
             {"uid":"1222222","nickname":"abcdddd","avatar":"xxx.png"}
             ]
         """.trimIndent().toByteArray()
-    val response = Response(requestInfo = RequestBuilder.newBuilder().build(), code = 0, headers = emptyMap(),
-        body = Response.Body(data = data, dataStr = String(data, Charset.forName("UTF-8")), charset = "UTF-8"),0L, 0L
-        )
+    val response = Response(
+        requestInfo = RequestBuilder.newBuilder().build(), code = 0, headers = emptyMap(),
+        body = Response.Body(data = data, dataStr = String(data, Charset.forName("UTF-8")), charset = "UTF-8"), 0L, 0L
+    )
 
 //    val user = response.transform<List<User>>(object : TypeToken<Any>::class.java) {
 //
@@ -176,6 +183,6 @@ private  fun testTransform() {
     println(user)
 }
 
-data class UserList(val count:Int, val hasMore:Boolean, val list:List<User>)
+data class UserList(val count: Int, val hasMore: Boolean, val list: List<User>)
 
-data class User(val uid:String, val nickname:String, val avatar:String)
+data class User(val uid: String, val nickname: String, val avatar: String)
