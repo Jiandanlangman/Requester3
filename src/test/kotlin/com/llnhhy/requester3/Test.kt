@@ -1,14 +1,13 @@
 package com.llnhhy.requester3
 
 import com.llnhhy.requester3.config.ConfigBuilder
-import com.llnhhy.requester3.config.Timeout
+import com.llnhhy.requester3.negotiation.*
 import com.llnhhy.requester3.request.*
 import com.llnhhy.requester3.response.Response
-import com.llnhhy.requester3.transformation.*
 import kotlinx.coroutines.*
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.Serializable
 import java.nio.charset.Charset
-import java.text.SimpleDateFormat
-import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.HashMap
@@ -30,15 +29,16 @@ fun newCachedThreadPoolCoroutineDispatcher(coreSize: Int, name: String): Executo
 }
 
 fun main() {
-    runBlocking {
-        val user = RequestBuilder.newBuilder()
-            .url("user/info")
-            .get()
-            .appendParam("id", 12345)
-            .build()
-            .call()
-            .transformTo(typeOf<User>())
-    }
+
+//    runBlocking {
+//        val user = RequestBuilder.newBuilder()
+//            .url("user/info")
+//            .get()
+//            .appendParam("id", 12345)
+//            .build()
+//            .call()
+//            .transformTo(typeOf<User>())
+//    }
 
 
 //    val a = ThreadPoolExecutor(
@@ -86,10 +86,10 @@ fun main() {
 //    println(text.replace(Regex("/+$"), ""))
 //    println(text.replace(Regex("//+"), "/"))
 
-    testRequest()
-    while (true) {
-
-    }
+//    testRequest()
+//    while (true) {
+//
+//    }
 
 //    RequestBuilder.newBuilder()
 //        .url("xxxxx")
@@ -111,7 +111,38 @@ fun main() {
 //    }
 //    GET, HEAD不能有Body
     //POST,PUT,PATCH.DELETE 可以有body
+    testSer()
 }
+
+@OptIn(InternalSerializationApi::class, ExperimentalStdlibApi::class)
+fun testSer() {
+    val data = """
+        [
+        {"id":1, "name":"abc"},
+        {"id":2, "name":"fggg"},
+        {"id":3, "name":"srtg"}
+        ]
+    """.trimIndent()
+//    ResponseContentNegotiation gson {
+//
+//    }
+    val response = Response(
+        requestInfo = RequestBuilder.newBuilder().build(),
+        code = 0,
+        headers = emptyMap(),
+        body = Response.Body(data = data.toByteArray(), dataStr = data, charset = "UTF-8"),
+        requestTime = 0L,
+        responseTime = 0L
+    )
+   val resp =  response body transformTo<List<TestModel>>()
+    println(resp)
+}
+
+@Serializable
+data class TestModel(
+    val id:Int,
+    val name:String
+)
 
 private fun testRequest() {
     Requester.config(ConfigBuilder().ignoreSSLCertification(true)
@@ -172,8 +203,8 @@ private fun testTransform() {
 //
 //    }
 //    response.transform<List<User>>()
-    response transformTo String::class.java
-    val user = response transformTo typeOf<List<User>>()
+//    response transformTo String::class.java
+//    val user = response transformTo typeOf<List<User>>()
 //    val user = response.transform<List<User>>()
 //    val user = response.transform<UserList>()
 //    response.transform<Map<String, String>>()
@@ -185,7 +216,7 @@ private fun testTransform() {
 //    HttpGet from "https://www.baidu.com" sync call transformTo User::class.java get { this?.uid }
 
 
-    println(user)
+//    println(user)
 }
 
 data class UserList(val count: Int, val hasMore: Boolean, val list: List<User>)
