@@ -145,6 +145,10 @@ data class TestModel(
 )
 
 private fun testRequest() {
+    Requester.config(ConfigBuilder().requestProcessor {
+        it.newBuilder().build()
+    })
+//    HttpPost from "dasds" //
 //    Requester.config(ConfigBuilder().ignoreSSLCertification(true)
 //        .headers(HashMap<String, Any>().apply {
 //            put("globalHeader1", 1)

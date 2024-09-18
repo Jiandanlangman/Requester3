@@ -68,7 +68,7 @@ class RequestBuilder private constructor(entity: RequestEntity?) {
 //                }
 //            }
 //        }
-        val params = mutableRequestEntity.params
+//        val params = mutableRequestEntity.params
 //        if (prohibit and RequestEntity.PROHIBIT_FLAG_GLOBAL_PARAMS == RequestEntity.PROHIBIT_FLAG_GLOBAL_PARAMS) {
 //            Requester.config.params.forEach { (t, u) ->
 //                if (params[t] == u) {
