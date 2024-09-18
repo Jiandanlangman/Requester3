@@ -59,23 +59,6 @@ class RequestBuilder private constructor(entity: RequestEntity?) {
 
 
     fun build(): RequestEntity {
-//        val prohibit = mutableRequestEntity.prohibit
-//        val headers = mutableRequestEntity.headers
-//        if (prohibit and RequestEntity.PROHIBIT_FLAG_GLOBAL_HEADERS == RequestEntity.PROHIBIT_FLAG_GLOBAL_HEADERS) {
-//            Requester.config.headers.forEach { (t, u) ->
-//                if (headers[t] == u) {
-//                    headers.remove(t)
-//                }
-//            }
-//        }
-//        val params = mutableRequestEntity.params
-//        if (prohibit and RequestEntity.PROHIBIT_FLAG_GLOBAL_PARAMS == RequestEntity.PROHIBIT_FLAG_GLOBAL_PARAMS) {
-//            Requester.config.params.forEach { (t, u) ->
-//                if (params[t] == u) {
-//                    params.remove(t)
-//                }
-//            }
-//        }
         return mutableRequestEntity.toRequestEntity()
     }
 

@@ -118,9 +118,9 @@ fun main() {
 fun testSer() {
     val data = """
         [
-        {"id":1, "name":"abc"},
-        {"id":2, "name":"fggg"},
-        {"id":3, "name":"srtg"}
+        {"id":1, "name":"abc", "labels":[{"icon":"dadsadas", "name":"label1", "sort":0},{"icon":"dadsadas", "name":"label2", "sort":1}]},
+        {"id":2, "name":"fggg", "labels":[{"icon":"dadsadas", "name":"label1", "sort":0},{"icon":"dadsadas", "name":"label2", "sort":1}]},
+        {"id":3, "name":"srtg", "labels":[{"icon":"dadsadas", "name":"label1", "sort":0},{"icon":"dadsadas", "name":"label2", "sort":1}]}
         ]
     """.trimIndent()
 //    ResponseContentNegotiation gson {
@@ -134,15 +134,22 @@ fun testSer() {
         requestTime = 0L,
         responseTime = 0L
     )
-   val resp =  response body transformTo<List<TestModel>>()
+//    response
+
+//   val resp =  response body transformTo<List<TestModel>>()
+    val resp = response bodyTransformTo typeOf<List<TestModel>>()
     println(resp)
 }
 
 @Serializable
 data class TestModel(
     val id:Int,
-    val name:String
+    val name:String,
+    val labels:List<Label>
 )
+
+@Serializable
+data class Label(val icon:String, val name:String, val sort:Int)
 
 private fun testRequest() {
     Requester.config(ConfigBuilder().requestProcessor {
@@ -166,9 +173,7 @@ private fun testRequest() {
 //    )
     repeat(200) {
         runBlocking {
-            val response = HttpGet from "https://www.baidu.com/" prohibit {
-                RequestEntity.PROHIBIT_FLAG_ALL_EXCLUDE_RESPONSE_INTERCEPTOR
-            } where {
+            val response = HttpGet from "https://www.baidu.com/"  where {
 
             } enqueue {
                 println(it.body?.dataStr)

@@ -8,17 +8,17 @@ import kotlinx.serialization.serializer
 import java.nio.charset.Charset
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
-import kotlin.reflect.typeOf
 
 
 interface JsonDecoder {
 
-    fun <T> decodeFromString(type: KType, body: Response.Body): T?
+    fun <T> decodeFromBody(type: KType, body: Response.Body): T?
 
 }
 
-class KJsonDecoder(private val json: Json) : JsonDecoder {
-    override fun <T> decodeFromString(type: KType, body: Response.Body): T? {
+private class KJsonDecoder(private val json: Json) : JsonDecoder {
+
+    override fun <T> decodeFromBody(type: KType, body: Response.Body): T? {
         try {
             @Suppress("UNCHECKED_CAST")
             return json.decodeFromString<T>(deserializer = serializer(type) as KSerializer<T>, string = String(bytes = body.data, Charset.forName(body.charset)))
@@ -27,6 +27,7 @@ class KJsonDecoder(private val json: Json) : JsonDecoder {
         }
         return null
     }
+
 }
 
 
@@ -43,7 +44,7 @@ val jsonDecoder: JsonDecoder
 
 object ResponseContentNegotiation {
 
-    infix fun kJson(jsonBuilder: JsonBuilder.() -> Unit) {
+    infix fun json(jsonBuilder: JsonBuilder.() -> Unit) {
         innerJsonDecoder = KJsonDecoder(Json { this.apply(jsonBuilder) })
     }
 
@@ -53,11 +54,9 @@ object ResponseContentNegotiation {
 
 }
 
-infix fun <T> Response.body(KTypeInfo: KTypeInfo<T>) = body?.let { jsonDecoder.decodeFromString<T>(KTypeInfo.type, it) }
+infix fun <T : Any> Response.bodyTransformTo(typeInfo: TransformInfo<T>) = body?.let { jsonDecoder.decodeFromBody<T>(typeInfo.type, it) }
+
+inline fun <reified T : Any> typeOf() = TransformInfo(kotlin.reflect.typeOf<T>(), T::class)
 
 
-inline fun <reified T> transformTo(): KTypeInfo<T> {
-    return KTypeInfo(typeOf<T>(), T::class)
-}
-
-class KTypeInfo<T>(val type: KType, clazz: KClass<*>)
+class TransformInfo<T : Any>(internal val type: KType, clazz: KClass<T>)
