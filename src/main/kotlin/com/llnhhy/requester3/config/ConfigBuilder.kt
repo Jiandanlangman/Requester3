@@ -20,8 +20,8 @@ class ConfigBuilder {
         var timeout: Timeout,
         var ignoreSSLCertification: Boolean,
         var dns: ((String) -> List<InetAddress>)?,
-        var headers: Map<String, Any>,
-        var params: Map<String, Any>,
+//        var headers: Map<String, Any>,
+//        var params: Map<String, Any>,
         var requestProcessor: suspend NotCallerThread.(RequestEntity) -> RequestEntity?,
         var responseInterceptor: suspend NotCallerThread.(Response) -> Boolean,
         var dispatcher: CoroutineDispatcher?
@@ -37,8 +37,8 @@ class ConfigBuilder {
                     config.timeout,
                     config.ignoreSSLCertification,
                     config.dns,
-                    config.headers,
-                    config.params,
+//                    config.headers,
+//                    config.params,
                     config.requestProcessor,
                     config.responseInterceptor,
                     config.dispatcher
@@ -54,8 +54,8 @@ class ConfigBuilder {
             timeout,
             ignoreSSLCertification,
             dns,
-            headers,
-            params,
+//            headers,
+//            params,
             requestProcessor,
             responseInterceptor,
             dispatcher
@@ -87,13 +87,13 @@ class ConfigBuilder {
         mutableConfig.dns = dns
     }
 
-    fun headers(headers: Map<String, Any>) = apply {
-        mutableConfig.headers = headers
-    }
-
-    fun params(params: Map<String, Any>) = apply {
-        mutableConfig.params = params
-    }
+//    fun headers(headers: Map<String, Any>) = apply {
+//        mutableConfig.headers = headers
+//    }
+//
+//    fun params(params: Map<String, Any>) = apply {
+//        mutableConfig.params = params
+//    }
 
     fun requestProcessor(processor: suspend NotCallerThread.(RequestEntity) -> RequestEntity) = apply {
         mutableConfig.requestProcessor = processor

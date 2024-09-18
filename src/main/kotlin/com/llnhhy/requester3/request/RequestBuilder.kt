@@ -33,11 +33,7 @@ class RequestBuilder private constructor(entity: RequestEntity?) {
 
             fun newInstance(): MutableRequestEntity {
                 val defaultConfig = Requester.config
-                return MutableRequestEntity("", defaultConfig.method, HashMap<String, Any>().apply {
-                    putAll(defaultConfig.headers)
-                }, HashMap<String, Any>().apply {
-                    putAll(defaultConfig.params)
-                }, mutableMapOf(), null, defaultConfig.timeout, 0)
+                return MutableRequestEntity("", defaultConfig.method, mutableMapOf(), mutableMapOf(), mutableMapOf(), null, defaultConfig.timeout, 0)
             }
 
             fun newInstance(entity: RequestEntity): MutableRequestEntity {
@@ -63,23 +59,23 @@ class RequestBuilder private constructor(entity: RequestEntity?) {
 
 
     fun build(): RequestEntity {
-        val prohibit = mutableRequestEntity.prohibit
-        val headers = mutableRequestEntity.headers
-        if (prohibit and RequestEntity.PROHIBIT_FLAG_GLOBAL_HEADERS == RequestEntity.PROHIBIT_FLAG_GLOBAL_HEADERS) {
-            Requester.config.headers.forEach { (t, u) ->
-                if (headers[t] == u) {
-                    headers.remove(t)
-                }
-            }
-        }
+//        val prohibit = mutableRequestEntity.prohibit
+//        val headers = mutableRequestEntity.headers
+//        if (prohibit and RequestEntity.PROHIBIT_FLAG_GLOBAL_HEADERS == RequestEntity.PROHIBIT_FLAG_GLOBAL_HEADERS) {
+//            Requester.config.headers.forEach { (t, u) ->
+//                if (headers[t] == u) {
+//                    headers.remove(t)
+//                }
+//            }
+//        }
         val params = mutableRequestEntity.params
-        if (prohibit and RequestEntity.PROHIBIT_FLAG_GLOBAL_PARAMS == RequestEntity.PROHIBIT_FLAG_GLOBAL_PARAMS) {
-            Requester.config.params.forEach { (t, u) ->
-                if (params[t] == u) {
-                    params.remove(t)
-                }
-            }
-        }
+//        if (prohibit and RequestEntity.PROHIBIT_FLAG_GLOBAL_PARAMS == RequestEntity.PROHIBIT_FLAG_GLOBAL_PARAMS) {
+//            Requester.config.params.forEach { (t, u) ->
+//                if (params[t] == u) {
+//                    params.remove(t)
+//                }
+//            }
+//        }
         return mutableRequestEntity.toRequestEntity()
     }
 

@@ -145,21 +145,21 @@ data class TestModel(
 )
 
 private fun testRequest() {
-    Requester.config(ConfigBuilder().ignoreSSLCertification(true)
-        .headers(HashMap<String, Any>().apply {
-            put("globalHeader1", 1)
-            put("globalHeader2", 2)
-        }
-        ).params(HashMap<String, Any>().apply {
-            put("globalParam3", 3)
-            put("globalParam4", 4)
-        }).requestProcessor {
-            it.newBuilder().appendHeader("t", System.currentTimeMillis()).build()
-        }
-//        .responseListener {
-//            println(it)
+//    Requester.config(ConfigBuilder().ignoreSSLCertification(true)
+//        .headers(HashMap<String, Any>().apply {
+//            put("globalHeader1", 1)
+//            put("globalHeader2", 2)
 //        }
-    )
+//        ).params(HashMap<String, Any>().apply {
+//            put("globalParam3", 3)
+//            put("globalParam4", 4)
+//        }).requestProcessor {
+//            it.newBuilder().appendHeader("t", System.currentTimeMillis()).build()
+//        }
+////        .responseListener {
+////            println(it)
+////        }
+//    )
     repeat(200) {
         runBlocking {
             val response = HttpGet from "https://www.baidu.com/" prohibit {

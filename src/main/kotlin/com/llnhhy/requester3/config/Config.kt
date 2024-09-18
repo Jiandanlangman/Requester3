@@ -17,8 +17,8 @@ open class Config internal constructor(
     val timeout: Timeout = Timeout.Default,
     val ignoreSSLCertification: Boolean = false,
     val dns: ((String) -> List<InetAddress>)? = null,
-    val headers: Map<String, Any> = emptyMap(),
-    val params: Map<String, Any> = emptyMap(),
+//    val headers: Map<String, Any> = emptyMap(),
+//    val params: Map<String, Any> = emptyMap(),
     val requestProcessor: suspend NotCallerThread.(RequestEntity) -> RequestEntity? = { it },
     val responseInterceptor: suspend NotCallerThread.(Response) -> Boolean = { false },
     val dispatcher: CoroutineDispatcher?= null
