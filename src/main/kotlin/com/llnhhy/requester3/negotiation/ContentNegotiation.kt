@@ -21,7 +21,7 @@ private class KJsonDecoder(private val json: Json) : JsonDecoder {
 
 
     override fun <T> decodeFromBody(type: KType, body: ByteArray, charset: Charset): T? {
-        if(type == typeOf<String>()) {
+        if (type == typeOf<String>()) {
             @Suppress("UNCHECKED_CAST")
             return String(body, charset) as T
         }
@@ -37,30 +37,32 @@ private class KJsonDecoder(private val json: Json) : JsonDecoder {
 }
 
 
-private var innerJsonDecoder: JsonDecoder = KJsonDecoder(Json {
+private var jsonDecoder: JsonDecoder = KJsonDecoder(Json {
     explicitNulls = false
     ignoreUnknownKeys = true
     encodeDefaults = true
     isLenient = true
 })
 
-val jsonDecoder: JsonDecoder
-    get() = innerJsonDecoder
-
 
 object ResponseContentNegotiation {
 
     infix fun json(jsonBuilder: JsonBuilder.() -> Unit) {
-        innerJsonDecoder = KJsonDecoder(Json { this.apply(jsonBuilder) })
+        jsonDecoder = KJsonDecoder(Json { this.apply(jsonBuilder) })
     }
 
     infix fun custom(decoder: JsonDecoder) {
-        innerJsonDecoder = decoder
+        jsonDecoder = decoder
     }
 
 }
 
-infix fun <T : Any> Response.bodyTransformTo(typeInfo: TransformInfo<T>) = body?.let { jsonDecoder.decodeFromBody<T>(typeInfo.type, it, charset) }
+
+inline fun <reified T : Any> Response.body() = this bodyTransformTo com.llnhhy.requester3.negotiation.typeOf<T>()
+
+infix fun <T : Any> Response.bodyTransformTo(info: TransformInfo<T>) = body?.let {
+    jsonDecoder.decodeFromBody<T>(info.type, it, charset)
+}
 
 inline fun <reified T : Any> typeOf() = TransformInfo(typeOf<T>(), T::class)
 

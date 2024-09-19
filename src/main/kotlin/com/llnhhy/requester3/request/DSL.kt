@@ -24,59 +24,86 @@ interface FormDataScope : CallOrEnqueueScope {
     infix fun formData(builder: MutableMapBuilder.() -> Unit): CallOrEnqueueScope
 }
 
-interface BodyDataScope : CallOrEnqueueScope {
+interface BodyScope : CallOrEnqueueScope {
     infix fun body(builder: BodyBuilder.() -> BodyContentType): CallOrEnqueueScope
 }
 
-
-interface QueriesScope : CallOrEnqueueScope {
-
-    infix fun queries(builder: MutableMapBuilder.() -> Unit): HeadersAndTimeoutScope
-
-}
-
-interface HeadersScope : CallOrEnqueueScope {
-    infix fun headers(builder: MutableMapBuilder.() -> Unit): QueriesAndTimeoutScope
-}
-
-interface TimeoutScope : CallOrEnqueueScope {
-    infix fun timeout(builder: TimeoutBuilder.() -> Unit): QueriesAndHeadersScope
-}
-
-interface HeadersAndTimeoutScope : HeadersScope, TimeoutScope, FormDataScope, BodyDataScope
-
-interface QueriesAndTimeoutScope : QueriesScope, TimeoutScope, FormDataScope, BodyDataScope
-
-interface QueriesAndHeadersScope : QueriesScope, HeadersScope, FormDataScope, BodyDataScope
-
-
 object sync : RequesterDSLScope
 
-class RequestBuilderScope internal constructor(private val requestBuilder: RequestBuilder) : HeadersAndTimeoutScope, QueriesAndTimeoutScope, QueriesAndHeadersScope {
 
+interface A {
+    infix fun timeout(t:Int) : A
+}
 
-    override suspend fun call(sync: sync) = Requester.call(requestBuilder.build())
+open class B : A {
+    override fun timeout(t: Int): B {
+        return this
+    }
 
-
-    override fun enqueue(response: NotCallerThread.(Response) -> Unit) = Requester.enqueue(requestBuilder.build(), response)
-
-
-    override fun timeout(builder: TimeoutBuilder.() -> Unit): QueriesAndHeadersScope = apply {
-        val timeOutBuilder = TimeoutBuilder().apply(builder)
-        requestBuilder.timeout(Timeout(connect = timeOutBuilder.collect, write = timeOutBuilder.write, read = timeOutBuilder.read))
+    fun b() {
 
     }
 
-    override fun queries(builder: MutableMapBuilder.() -> Unit): HeadersAndTimeoutScope = apply {
+}
+
+class C : B() {
+    override fun timeout(t: Int): C {
+        super.timeout(t)
+        return this
+    }
+
+    fun c() {
+
+    }
+}
+
+fun test() {
+
+}
+
+//interface PropertiesScope {
+//    infix fun timeout(builder: TimeoutBuilder.() -> Unit) : PropertiesScope
+//    infix fun queries(builder: MutableMapBuilder.() -> Unit): PropertiesScope
+//    infix fun
+//}
+
+open class NoBodyRequesterBuilderScope internal constructor(private val requestBuilder: RequestBuilder) : CallOrEnqueueScope {
+
+    override suspend fun call(sync: sync) = Requester.call(requestBuilder.build())
+
+    override fun enqueue(response: NotCallerThread.(Response) -> Unit) = Requester.enqueue(requestBuilder.build(), response)
+
+    open infix fun timeout(builder: TimeoutBuilder.() -> Unit) = apply {
+        val timeOutBuilder = TimeoutBuilder().apply(builder)
+        requestBuilder.timeout(Timeout(connect = timeOutBuilder.collect, write = timeOutBuilder.write, read = timeOutBuilder.read))
+    }
+
+    open infix fun queries(builder: MutableMapBuilder.() -> Unit) = apply {
         requestBuilder.queries {
             MutableMapBuilder(this).apply(builder)
         }
     }
 
-    override fun headers(builder: MutableMapBuilder.() -> Unit): QueriesAndTimeoutScope = apply {
+    open infix fun headers(builder: MutableMapBuilder.() -> Unit) = apply {
         requestBuilder.headers {
             MutableMapBuilder(this).apply(builder)
         }
+    }
+
+}
+
+class RequestBuilderScope internal constructor(private val requestBuilder: RequestBuilder) : NoBodyRequesterBuilderScope(requestBuilder), FormDataScope, BodyScope  {
+
+    override fun timeout(builder: TimeoutBuilder.() -> Unit): RequestBuilderScope = apply {
+        super.timeout(builder)
+    }
+
+    override fun queries(builder: MutableMapBuilder.() -> Unit): RequestBuilderScope = apply {
+        super.queries(builder)
+    }
+
+    override fun headers(builder: MutableMapBuilder.() -> Unit): RequestBuilderScope = apply {
+        super.headers(builder)
     }
 
     override fun body(builder: BodyBuilder.() -> BodyContentType): CallOrEnqueueScope = apply {
@@ -95,36 +122,44 @@ class RequestBuilderScope internal constructor(private val requestBuilder: Reque
 
 }
 
+abstract class NoBodyRequestInfixStart internal constructor(private val method: String) {
+    infix fun from(url: String) : NoBodyRequesterBuilderScope {
+        return NoBodyRequesterBuilderScope(RequestBuilder.newBuilder().url(url).apply {
+            when(method) {
+                "HEAD" -> head()
+                else -> get()
+            }
+        })
+    }
+}
 
-abstract class MethodDSL internal constructor(private val name: String) {
+abstract class RequestInfixStart internal constructor(private val name: String) {
 
     infix fun from(url: String): RequestBuilderScope {
         return RequestBuilderScope(RequestBuilder.newBuilder().url(url)
             .apply {
                 when (name) {
-                    "POST" -> post()
                     "PUT" -> put()
                     "PATCH" -> patch()
                     "DELETE" -> delete()
-                    "HEAD" -> head()
-                    else -> get()
+                    else -> post()
                 }
             })
     }
 }
 
 
-object HttpGet : MethodDSL("GET")
+object HttpGet : NoBodyRequestInfixStart("GET")
 
-object HttpPost : MethodDSL("POST")
+object HttpPost : RequestInfixStart("POST")
 
-object HttpPut : MethodDSL("PUT")
+object HttpPut : RequestInfixStart("PUT")
 
-object HttpPatch : MethodDSL("PATCH")
+object HttpPatch : RequestInfixStart("PATCH")
 
-object HttpDelete : MethodDSL("DELETE")
+object HttpDelete : RequestInfixStart("DELETE")
 
-object HttpHead : MethodDSL("HEAD")
+object HttpHead : NoBodyRequestInfixStart("HEAD")
 
 
 class MutableMapBuilder internal constructor(private val map: MutableMap<String, Any>) {

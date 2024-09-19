@@ -7,10 +7,7 @@ import com.llnhhy.requester3.response.Response
 import kotlinx.coroutines.*
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.Serializable
-import sun.rmi.runtime.Log
-import java.nio.charset.Charset
 import java.util.concurrent.*
-import java.util.concurrent.atomic.AtomicInteger
 
 
 //fun newCachedThreadPoolCoroutineDispatcher(coreSize: Int, name: String): ExecutorCoroutineDispatcher {
@@ -47,8 +44,8 @@ private fun testRequest() {
         }
     }
     runBlocking {
-      val response =  HttpGet from "https://www.baidu.com/" call sync
-        println(response)
+//      val response =  HttpGet from "https://www.baidu.com/"  call sync bodyTransformTo typeOf<String>()
+//        println(response)
     }
 }
 
