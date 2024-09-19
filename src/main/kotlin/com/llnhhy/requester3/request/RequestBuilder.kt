@@ -20,20 +20,19 @@ class RequestBuilder private constructor(entity: RequestEntity?) {
         var url: String,
         var method: String,
         var headers: MutableMap<String, Any>,
-        var params: MutableMap<String, Any>,
+        var formData: MutableMap<String, Any>,
         val queries:MutableMap<String, Any>,
         var body: Body?,
-        var timeout: Timeout,
-        var prohibit: Int
+        var timeout: Timeout
     ) {
 
-        fun toRequestEntity() = RequestEntity(url, method, headers, params, queries, body, timeout, prohibit)
+        fun toRequestEntity() = RequestEntity(url, method, headers, formData, queries, body, timeout)
 
         companion object {
 
             fun newInstance(): MutableRequestEntity {
                 val defaultConfig = Requester.config
-                return MutableRequestEntity("", defaultConfig.method, mutableMapOf(), mutableMapOf(), mutableMapOf(), null, defaultConfig.timeout, 0)
+                return MutableRequestEntity("", defaultConfig.defaultMethod, mutableMapOf(), mutableMapOf(), mutableMapOf(), null, defaultConfig.timeout)
             }
 
             fun newInstance(entity: RequestEntity): MutableRequestEntity {
@@ -41,11 +40,10 @@ class RequestBuilder private constructor(entity: RequestEntity?) {
                     entity.url,
                     entity.method,
                     entity.headers.toMutableMap(),
-                    entity.params.toMutableMap(),
+                    entity.formData.toMutableMap(),
                     entity.queries.toMutableMap(),
                     entity.body,
-                    entity.timeout,
-                    entity.prohibit
+                    entity.timeout
                 )
             }
 
@@ -92,35 +90,22 @@ class RequestBuilder private constructor(entity: RequestEntity?) {
         mutableRequestEntity.method = "DELETE"
     }
 
-    fun appendHeader(key: String, value: Any?) = apply {
-        mutableRequestEntity.headers.let {
-            if (value == null) {
-                it.remove(key)
-            } else {
-                it[key] = value
-            }
-        }
+    fun method(method: String) = apply {
+        mutableRequestEntity.method = method
     }
 
-    fun appendParam(key: String, value: Any?) = apply {
-        mutableRequestEntity.params.let {
-            if (value == null) {
-                it.remove(key)
-            } else {
-                it[key] = value
-            }
-        }
+    fun headers(headers: MutableMap<String, Any>.() -> Unit) = apply {
+        mutableRequestEntity.headers.apply(headers)
     }
 
-    fun appendQuery(key: String, value: Any?) = apply {
-        mutableRequestEntity.queries.let {
-            if (value == null) {
-                it.remove(key)
-            } else {
-                it[key] = value
-            }
-        }
+    fun formData(formData: MutableMap<String, Any>.() -> Unit) = apply {
+        mutableRequestEntity.formData.apply(formData)
     }
+
+    fun queries(queries: MutableMap<String, Any>.() -> Unit) = apply {
+        mutableRequestEntity.queries.apply(queries)
+    }
+
 
     fun body(body: Body) = apply {
         mutableRequestEntity.body = body
@@ -130,27 +115,6 @@ class RequestBuilder private constructor(entity: RequestEntity?) {
         mutableRequestEntity.timeout = timeout
     }
 
-    fun prohibit(prohibit: Int) = apply {
-        mutableRequestEntity.prohibit = prohibit
-    }
 
-
-    fun appendHeaders(headers: Map<String, Any?>) = apply {
-        headers.forEach { (t, u) ->
-            appendHeader(t, u)
-        }
-    }
-
-    fun appendParams(params: Map<String, Any?>) = apply {
-        params.forEach { (t, u) ->
-            appendParam(t, u)
-        }
-    }
-
-    fun appendQueries(queries: Map<String, Any?>) = apply {
-        queries.forEach { (t, u) ->
-            appendQuery(t, u)
-        }
-    }
 
 }

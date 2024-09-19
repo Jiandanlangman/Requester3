@@ -1,32 +1,44 @@
 package com.llnhhy.requester3.response
 
 import com.llnhhy.requester3.request.RequestEntity
+import java.nio.charset.Charset
 
 class Response(
     val requestInfo: RequestEntity,
     val code: Int = 0,
     val headers: Map<String, String>,
-    val body: Body?,
-    val requestTime:Long,
-    val responseTime:Long,
+    val body: ByteArray?,
+    val requestTime: Long,
+    val responseTime: Long,
     val throwable: Throwable? = null
 ) {
 
     companion object {
-        const val RESPONSE_CODE_THROW_EXCEPTION = -1
-        const val RESPONSE_CODE_REQUEST_INTERCEPTED = -2
-        const val RESPONSE_CODE_BLOCKED = -3
+        const val CODE_REQUEST_ERROR = -1
+        const val CODE_REQUEST_CANCELED = -2
     }
 
-    class Body(val data: ByteArray, val dataStr: String, val charset: String) {
-        override fun toString(): String {
-            return "Body(byteArrayLength=${data.size}, dataStr='${dataStr}', charset='$charset')"
+    val contentType: String
+        get() = headers["content-type"] ?: "text/plain;charset=UTF-8"
+
+    val charset: Charset
+        get() = try {
+            val startIndex = contentType.indexOf("charset=")
+            val charsetStr = if (startIndex != -1) {
+                val endIndex = contentType.indexOf(";", startIndex + 8)
+                contentType.substring(
+                    startIndex + 8,
+                    if (endIndex != -1) endIndex else contentType.length
+                ).uppercase()
+            } else {
+                "UTF-8"
+            }
+            Charset.forName(charsetStr)
+        } catch (ignore: Throwable) {
+            Charset.forName("UTF-8")
         }
-    }
 
     override fun toString(): String {
-        return "Response(requestInfo=$requestInfo, code=$code, headers=$headers, body=$body, requestTime=$requestTime, responseTime=$responseTime, throwable=$throwable)"
+        return "Response(urrequestInfo=$requestInfo, code=$code, headers=$headers, body=${if(body == null) "null" else "'${String(body, charset)}'"}, requestTime=$requestTime, responseTime=$responseTime)"
     }
-
-
 }

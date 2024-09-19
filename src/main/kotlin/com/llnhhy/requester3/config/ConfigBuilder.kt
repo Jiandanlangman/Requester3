@@ -2,62 +2,53 @@ package com.llnhhy.requester3.config
 
 import com.llnhhy.requester3.request.RequestEntity
 import com.llnhhy.requester3.response.Response
-import com.llnhhy.requester3.NotCallerThread
+import com.llnhhy.requester3.interceptor.Interceptor
 import kotlinx.coroutines.CoroutineDispatcher
 import java.net.InetAddress
 
 
-class ConfigBuilder {
+class ConfigBuilder internal constructor() {
 
     private companion object {
+
         private val baseUrlRegex = Regex("/+$")
+
 
     }
 
     private class MutableConfig(
         var basePrefix: String,
-        var method: String,
+        var defaultMethod: String,
         var timeout: Timeout,
         var ignoreSSLCertification: Boolean,
         var dns: ((String) -> List<InetAddress>)?,
-//        var headers: Map<String, Any>,
-//        var params: Map<String, Any>,
-        var requestProcessor: suspend NotCallerThread.(RequestEntity) -> RequestEntity?,
-        var responseInterceptor: suspend NotCallerThread.(Response) -> Boolean,
+        var interceptor: suspend Interceptor.(RequestEntity) -> Response,
         var dispatcher: CoroutineDispatcher?
     ) {
 
         companion object {
 
-
             fun toMutableConfig(config: Config): MutableConfig {
                 return MutableConfig(
                     config.baseUrl,
-                    config.method,
+                    config.defaultMethod,
                     config.timeout,
                     config.ignoreSSLCertification,
                     config.dns,
-//                    config.headers,
-//                    config.params,
-                    config.requestProcessor,
-                    config.responseInterceptor,
+                    config.interceptor,
                     config.dispatcher
                 )
             }
-
 
         }
 
         fun toConfig() = Config(
             basePrefix,
-            method,
+            defaultMethod,
             timeout,
             ignoreSSLCertification,
             dns,
-//            headers,
-//            params,
-            requestProcessor,
-            responseInterceptor,
+            interceptor,
             dispatcher
         )
     }
@@ -65,14 +56,14 @@ class ConfigBuilder {
 
     private val mutableConfig: MutableConfig = MutableConfig.toMutableConfig(Config())
 
-    fun build() = mutableConfig.toConfig()
+    internal fun build() = mutableConfig.toConfig()
 
     fun baseUrl(baseUrl: String) = apply {
         mutableConfig.basePrefix = baseUrl.replace(baseUrlRegex, "")
     }
 
-    fun method(method: String) = apply {
-        mutableConfig.method = method
+    fun defaultMethod(method: String) = apply {
+        mutableConfig.defaultMethod = method
     }
 
     fun timeout(timeout: Timeout) = apply {
@@ -87,21 +78,11 @@ class ConfigBuilder {
         mutableConfig.dns = dns
     }
 
-//    fun headers(headers: Map<String, Any>) = apply {
-//        mutableConfig.headers = headers
-//    }
-//
-//    fun params(params: Map<String, Any>) = apply {
-//        mutableConfig.params = params
-//    }
 
-    fun requestProcessor(processor: suspend NotCallerThread.(RequestEntity) -> RequestEntity) = apply {
-        mutableConfig.requestProcessor = processor
+    fun interceptor(processor: suspend Interceptor.(RequestEntity) -> Response) = apply {
+        mutableConfig.interceptor = processor
     }
 
-    fun responseInterceptor(interceptor: suspend NotCallerThread.(Response) -> Boolean) = apply {
-        mutableConfig.responseInterceptor = interceptor
-    }
 
     fun dispatcher(dispatcher: CoroutineDispatcher) = apply {
         mutableConfig.dispatcher = dispatcher

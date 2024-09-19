@@ -3,6 +3,7 @@ package com.llnhhy.requester3
 import com.llnhhy.requester3.config.Config
 import com.llnhhy.requester3.config.ConfigBuilder
 import com.llnhhy.requester3.config.Timeout
+import com.llnhhy.requester3.interceptor.Interceptor
 import com.llnhhy.requester3.request.*
 import com.llnhhy.requester3.response.Response
 import kotlinx.coroutines.*
@@ -20,11 +21,10 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
+import kotlin.collections.component1
+import kotlin.collections.component2
 
-/**
- * TODO:
- *  文件上传支持
- */
+
 object Requester {
 
     private var defaultDispatcher: CoroutineDispatcher? = null
@@ -36,7 +36,7 @@ object Requester {
 
     private val defaultCharset = Charset.forName("UTF-8")
 
-    var config: Config = Config()
+    internal var config: Config = Config()
         private set
 
     private val httpClient = OkHttpClient.Builder()
@@ -54,85 +54,100 @@ object Requester {
         .build()
 
     @OptIn(DelicateCoroutinesApi::class)
+    @Synchronized
     private fun getDispatcher(): CoroutineDispatcher {
-        val configDispatcher = config.dispatcher
-        if(configDispatcher != null) {
-            if(defaultDispatcher != null) {
-                val temp = defaultDispatcher
-                defaultDispatcher = null
-                requesterGlobalScope.launch(configDispatcher) {
-                    try {
-                        (temp?.asExecutor() as?  ExecutorService)?.shutdown()
-                    } catch (ignore:Throwable) {
+        return config.dispatcher?.apply {
+            val temp = defaultDispatcher
+            defaultDispatcher = null
+            try {
+                (temp?.asExecutor() as? ExecutorService)?.shutdown()
+            } catch (ignore: Throwable) {
 
-                    }
-                }
             }
-            return configDispatcher
-        }
-        val dispatcher =  defaultDispatcher
-        if (dispatcher != null) {
-            return dispatcher
-        }
-        return newFixedThreadPoolContext(16, "Requester3-Work-Dispatcher").apply {
+        } ?: defaultDispatcher ?: newFixedThreadPoolContext(16, "Requester3-Work-Dispatcher").apply {
             synchronized(Requester) {
                 defaultDispatcher = this
             }
         }
     }
 
+    private val interceptor = object : Interceptor {
 
-    fun config(builder: ConfigBuilder) {
-        config = builder.build()
+        override suspend fun proceed(entity: RequestEntity): Response {
+            return originalCall(entity)
+        }
+
+        override fun cancel(entity: RequestEntity): Response {
+            val t = System.currentTimeMillis()
+            return Response(
+                requestInfo = entity,
+                code = Response.CODE_REQUEST_CANCELED,
+                headers = emptyMap(),
+                body = null,
+                requestTime = t,
+                responseTime = t
+            )
+        }
+
+
+    }
+
+    infix fun config(builder: ConfigBuilder.() -> Unit) {
+        config = ConfigBuilder().apply(builder).build()
     }
 
 
-    suspend fun call(requestEntity: RequestEntity): Response {
+    suspend fun call(entity: RequestEntity): Response {
+        return config.interceptor.invoke(interceptor, entity)
+    }
+
+    fun enqueue(
+        entity: RequestEntity,
+        response: NotCallerThread.(Response) -> Unit
+    ) = requesterGlobalScope.launch(getDispatcher()) {
+        response(NotCallerThread, call(entity))
+    }
+
+    private suspend fun originalCall(entity: RequestEntity): Response {
         return withContext(getDispatcher()) {
             val requestTime = System.currentTimeMillis()
-            val newRequestEntity =
-                if (requestEntity.hasProhibit(RequestEntity.PROHIBIT_FLAG_PROCESSOR)) requestEntity else config.requestProcessor(
-                    NotCallerThread,
-                    requestEntity
-                )
-            if (newRequestEntity == null) {
-                return@withContext Response(
-                    requestEntity,
-                    Response.RESPONSE_CODE_REQUEST_INTERCEPTED,
-                    emptyMap(),
-                    null,
-                    requestTime,
-                    System.currentTimeMillis(),
-                    null
-                )
+            val tag = "${System.currentTimeMillis()}-${entity.hashCode()}-${Thread.currentThread().id}"
+            if (entity.timeout != config.timeout) {
+                requestTimeoutProperties[tag] = entity.timeout
             }
-            val tag = "${System.currentTimeMillis()}-${newRequestEntity.hashCode()}-${Thread.currentThread().id}"
-            if (newRequestEntity.timeout != config.timeout) {
-                requestTimeoutProperties[tag] = newRequestEntity.timeout
-            }
-
-            val resp = try {
+            try {
                 httpClient.newCall(
                     Request.Builder()
                         .tag(tag)
-                        .url(getFullUrl(newRequestEntity.url, newRequestEntity.method, newRequestEntity.queries, newRequestEntity.params))
+                        .url(getFullUrl(entity.url, entity.method, entity.queries, entity.formData))
                         .apply {
-                            newRequestEntity.headers.forEach { (t, u) ->
+                            entity.headers.forEach { (t, u) ->
                                 addHeader(t, u.toString())
                             }
                         }
+//                        .method(entity.method, if(entity.body != null) {
+//                            entity.body.let { body ->
+//                                body.data.toRequestBody(body.contentType.toMediaTypeOrNull())
+//                            }
+//                        } else {
+//                            FormBody.Builder().apply {
+//                                entity.formData.forEach { (t, u) ->
+//                                    add(t, u.toString())
+//                                }
+//                            }.build()
+//                        })
                         .method(
-                            newRequestEntity.method,
-                            when (newRequestEntity.method) {
+                            entity.method,
+                            when (entity.method) {
                                 "GET", "HEAD" -> null
                                 else -> {
-                                    if (newRequestEntity.body != null) {
-                                        newRequestEntity.body.let { body ->
+                                    if (entity.body != null) {
+                                        entity.body.let { body ->
                                             body.data.toRequestBody(body.contentType.toMediaTypeOrNull())
                                         }
                                     } else {
                                         FormBody.Builder().apply {
-                                            newRequestEntity.params.forEach { (t, u) ->
+                                            entity.formData.forEach { (t, u) ->
                                                 add(t, u.toString())
                                             }
                                         }.build()
@@ -163,48 +178,15 @@ object Requester {
                             null
                         }
                     }
-                    Response(newRequestEntity, it.code, headers.toMap(), content.let { byteArray ->
-                        if (byteArray == null) {
-                            null
-                        } else {
-                            val contentType = (it.body?.contentType()?.toString() ?: headers["content-type"]
-                            ?: "text/plain;charset=UTF-8").lowercase()
-                            val charset = try {
-                                val startIndex = contentType.indexOf("charset=")
-                                val charsetStr = if (startIndex != -1) {
-                                    val endIndex = contentType.indexOf(";", startIndex + 8)
-                                    contentType.substring(
-                                        startIndex + 8,
-                                        if (endIndex != -1) endIndex else contentType.length
-                                    ).uppercase()
-                                } else {
-                                    "UTF-8"
-                                }
-                                Charset.forName(charsetStr)
-                            } catch (ignore: Throwable) {
-                                defaultCharset
-                            }
-                            if (isTextBody(contentType)) {
-                                Response.Body(
-                                    data = byteArray,
-                                    dataStr = String(byteArray, charset),
-                                    charset = charset.name()
-                                )
-                            } else {
-                                Response.Body(
-                                    data = byteArray,
-                                    dataStr = "",
-                                    charset = charset.name()
-                                )
-                            }
-
-                        }
-                    }, requestTime, System.currentTimeMillis())
+                    it.body?.contentType()?.toString()?.let {
+                        headers["content-type"] = it
+                    }
+                    Response(requestInfo = entity, code = it.code, headers = headers.toMap(), body = content, requestTime = requestTime, responseTime = System.currentTimeMillis())
                 }
             } catch (tr: Throwable) {
                 Response(
-                    newRequestEntity,
-                    Response.RESPONSE_CODE_THROW_EXCEPTION,
+                    entity,
+                    Response.CODE_REQUEST_ERROR,
                     emptyMap(),
                     null,
                     requestTime,
@@ -214,36 +196,11 @@ object Requester {
             } finally {
                 requestTimeoutProperties.remove(tag)
             }
-            val blocked = if (!newRequestEntity.hasProhibit(RequestEntity.PROHIBIT_FLAG_RESPONSE_INTERCEPTOR)) {
-                config.responseInterceptor(NotCallerThread, resp)
-            } else {
-                false
-            }
-            if (!blocked) {
-                resp
-            } else {
-                Response(
-                    newRequestEntity,
-                    Response.RESPONSE_CODE_BLOCKED,
-                    emptyMap(),
-                    null,
-                    requestTime,
-                    System.currentTimeMillis(),
-                    null
-                )
-            }
         }
     }
 
-    fun enqueue(
-        requestEntity: RequestEntity,
-        response: NotCallerThread.(Response) -> Unit
-    ) = requesterGlobalScope.launch(getDispatcher()) {
-        response(NotCallerThread, call(requestEntity))
-    }
 
-
-    private fun getFullUrl(url: String, method:String, queries: Map<String, Any> ,params:Map<String, Any>): String {
+    private fun getFullUrl(url: String, method: String, queries: Map<String, Any>, params: Map<String, Any>): String {
         val sb = StringBuilder()
         if (!url.startsWith("https://", true) && !url.startsWith("http://", true)) {
             sb.append(config.baseUrl)
@@ -253,21 +210,21 @@ object Requester {
             sb.append(url)
         }
         var hasQuery = sb.contains("?")
-        fun appendMap(map:Map<String, Any>) {
+        fun appendMap(map: Map<String, Any>) {
             map.forEach { (t, u) ->
-                if(!hasQuery) {
+                if (!hasQuery) {
                     sb.append("?")
                     hasQuery = true
-                }  else {
+                } else {
                     sb.append("&")
                 }
                 sb.append(t).append("=").append(URLEncoder.encode(u.toString(), "UTF-8"))
             }
         }
         appendMap(queries)
-        if(params.isNotEmpty() && (method == "GET" || method == "HEADER") ) {
-            appendMap(params)
-        }
+//        if (params.isNotEmpty() && (method == "GET" || method == "HEADER")) {
+//            appendMap(params)
+//        }
         return sb.toString()
     }
 
