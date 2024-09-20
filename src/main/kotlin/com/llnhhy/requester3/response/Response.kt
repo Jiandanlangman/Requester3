@@ -79,13 +79,19 @@ class Response(
             Charset.forName("UTF-8")
         }
 
-    inline fun <reified T : Any> body() = this bodyTransformTo com.llnhhy.requester3.negotiation.typeOf<T>()
-
-    infix fun <T : Any> bodyTransformTo(info: TransformInfo<T>) = body?.let {
-        jsonDecoder.decodeFromBody<T>(info.type, it, charset)
+    fun <T> bodyTransformTo(type: KType) : T? = body?.let {
+        jsonDecoder.decodeFromBody<T>(type, it, charset)
     }
+
+    inline fun <reified T> body() = bodyTransformTo<T>(typeOf<T>())
+
+    inline infix fun <reified T> bodyTransformTo(info : TransformInfo<T>) : T? {
+        return bodyTransformTo(typeOf<T>())
+    }
+
 
     override fun toString(): String {
         return "Response(urrequestInfo=$requestInfo, code=$code, headers=$headers, body=${if (body == null) "null" else "'${String(body, charset)}'"}, requestTime=$requestTime, responseTime=$responseTime)"
     }
 }
+

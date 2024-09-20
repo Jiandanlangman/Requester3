@@ -1,8 +1,6 @@
 package com.llnhhy.requester3.negotiation
 
-import com.llnhhy.requester3.response.Response
 import java.nio.charset.Charset
-import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.typeOf
 
@@ -13,10 +11,10 @@ interface JsonDecoder {
 
 }
 
-inline fun <reified T : Any> typeOf() = TransformInfo(typeOf<T>(), T::class)
+class TransformInfo<T >(internal val type: KType)
 
+inline fun <reified T > typeOf() = TransformInfo<T>(typeOf<T>())
 
-class TransformInfo<T : Any>(internal val type: KType, clazz: KClass<T>)
 
 
 
