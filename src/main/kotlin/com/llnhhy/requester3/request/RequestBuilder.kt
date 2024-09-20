@@ -7,7 +7,7 @@ class RequestBuilder private constructor(entity: RequestEntity?) {
 
     companion object {
 
-        private  val urlRegex = Regex("^/+")
+        private val urlRegex = Regex("^/+")
 
         fun newBuilder() = RequestBuilder(null)
 
@@ -21,12 +21,20 @@ class RequestBuilder private constructor(entity: RequestEntity?) {
         var method: String,
         var headers: MutableMap<String, Any>,
         var formData: MutableMap<String, Any>,
-        val queries:MutableMap<String, Any>,
+        val queries: MutableMap<String, Any>,
         var body: Body?,
         var timeout: Timeout
     ) {
 
-        fun toRequestEntity() = RequestEntity(url, method, headers, formData, queries, body, timeout)
+        fun toRequestEntity() = RequestEntity(url.let {
+            val sb = StringBuilder()
+            if (!it.startsWith("https://", true) && !it.startsWith("http://", true)) {
+                sb.append(Requester.config.baseUrl)
+                sb.append("/")
+            }
+            sb.append(it)
+            sb.toString()
+        }, method, headers, formData, queries, body, timeout)
 
         companion object {
 
@@ -114,7 +122,6 @@ class RequestBuilder private constructor(entity: RequestEntity?) {
     fun timeout(timeout: Timeout) = apply {
         mutableRequestEntity.timeout = timeout
     }
-
 
 
 }

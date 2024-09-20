@@ -9,16 +9,8 @@ import javax.net.ssl.X509TrustManager
 
 interface RequesterCore {
 
-//  companion object {
-//        abstract fun A()
-//    }
 
     suspend fun call(entity: RequestEntity) : Response
 
-//    fun setSSLSocketFactory(sslSocketFactory: SSLSocketFactory, trustManager: X509TrustManager)
-//
-//    fun setHostnameVerifier(hostnameVerifier: HostnameVerifier)
-//
-//    fun setDNS(dns:(String) -> List<InetAddress>)
 
 }

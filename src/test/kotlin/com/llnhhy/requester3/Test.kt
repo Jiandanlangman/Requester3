@@ -1,6 +1,5 @@
 package com.llnhhy.requester3
 
-import com.llnhhy.requester3.config.ConfigBuilder
 import com.llnhhy.requester3.negotiation.*
 import com.llnhhy.requester3.request.*
 import com.llnhhy.requester3.response.Response
@@ -28,24 +27,40 @@ import java.util.concurrent.*
 fun main() {
 
 
-//    testSer()
-    testRequest()
+    testSer()
+//    testRequest()
 }
 
 private fun testRequest() {
     Requester config {
-        interceptor {
+        baseUrl("https://api.xxx.xxx.com") //url前缀，设置后发起请求时url可不带前缀
+        interceptor {//拦截器
             println("interceptor:${it.url}")
-            proceed(it.newBuilder().url("https://www.ithome.com/").queries {
-                put("name", 123)
-            }.headers {
-                put("dasda", 222)
-            }.build())
+            val newBuilder = it.newBuilder().headers {
+                //全局Header
+                put("adad", "23123")
+            }.formData {
+                //全局formData，method为GET和HEAD时不生效
+            }.queries {
+                //全局query
+            }
+            val response = proceed(newBuilder.build()) //请求接口并拿到返回值, 如果需要取消请求，可以不调用这一行，手动构建一个Response返回
+            response.throwable?.printStackTrace() //如果有异常就打印出异常
+            val str = response.body<String>()
+            println(str) //打印日志
+            response//返回给请求框架
         }
+        //还有其它方法，可以调用this. 看看ide有什么提示
     }
     runBlocking {
-//      val response =  HttpGet from "https://www.baidu.com/"  call sync bodyTransformTo typeOf<String>()
-//        println(response)
+      val response =  HttpPost from "https://www.baidu.com/" queries {
+          put { "1" to 2 }
+      } headers {
+          put { "2" to "dadsa" }
+      } formData {
+          put { "dasds" to "dasdasdas" }
+      } call sync bodyTransformTo typeOf<String>()
+        println(response)
     }
 }
 

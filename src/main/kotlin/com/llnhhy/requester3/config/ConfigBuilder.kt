@@ -3,7 +3,6 @@ package com.llnhhy.requester3.config
 import com.llnhhy.requester3.request.RequestEntity
 import com.llnhhy.requester3.response.Response
 import com.llnhhy.requester3.interceptor.Interceptor
-import kotlinx.coroutines.CoroutineDispatcher
 import java.net.InetAddress
 
 
@@ -22,8 +21,7 @@ class ConfigBuilder internal constructor() {
         var timeout: Timeout,
         var ignoreSSLCertification: Boolean,
         var dns: ((String) -> List<InetAddress>)?,
-        var interceptor: suspend Interceptor.(RequestEntity) -> Response,
-        var dispatcher: CoroutineDispatcher?
+        var interceptor: suspend Interceptor.(RequestEntity) -> Response
     ) {
 
         companion object {
@@ -35,8 +33,7 @@ class ConfigBuilder internal constructor() {
                     config.timeout,
                     config.ignoreSSLCertification,
                     config.dns,
-                    config.interceptor,
-                    config.dispatcher
+                    config.interceptor
                 )
             }
 
@@ -48,8 +45,7 @@ class ConfigBuilder internal constructor() {
             timeout,
             ignoreSSLCertification,
             dns,
-            interceptor,
-            dispatcher
+            interceptor
         )
     }
 
@@ -84,7 +80,4 @@ class ConfigBuilder internal constructor() {
     }
 
 
-    fun dispatcher(dispatcher: CoroutineDispatcher) = apply {
-        mutableConfig.dispatcher = dispatcher
-    }
 }

@@ -1,7 +1,15 @@
 package com.llnhhy.requester3.response
 
+import com.llnhhy.requester3.negotiation.JsonDecoder
+import com.llnhhy.requester3.negotiation.TransformInfo
 import com.llnhhy.requester3.request.RequestEntity
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonBuilder
+import kotlinx.serialization.serializer
 import java.nio.charset.Charset
+import kotlin.reflect.KType
+import kotlin.reflect.typeOf
 
 class Response(
     val requestInfo: RequestEntity,
@@ -14,8 +22,41 @@ class Response(
 ) {
 
     companion object {
+
         const val CODE_REQUEST_ERROR = -1
         const val CODE_REQUEST_CANCELED = -2
+
+        private var jsonDecoder : JsonDecoder = json {
+            explicitNulls = false
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+            isLenient = true
+        }
+
+        infix fun contentNegotiation(jsonDecoder: JsonDecoder) {
+            this.jsonDecoder = jsonDecoder
+        }
+
+        infix fun json(builder: JsonBuilder.() -> Unit) = object : JsonDecoder {
+
+            private val json = Json { apply(builder) }
+
+            override fun <T> decodeFromBody(type: KType, body: ByteArray, charset: Charset): T? {
+                if (type == typeOf<String>()) {
+                    @Suppress("UNCHECKED_CAST")
+                    return String(body, charset) as T
+                }
+                try {
+                    @Suppress("UNCHECKED_CAST")
+                    return json.decodeFromString<T>(deserializer = serializer(type) as KSerializer<T>, string = String(body, charset))
+                } catch (tr: Throwable) {
+                    tr.printStackTrace()
+                }
+                return null
+            }
+        }
+
+
     }
 
     val contentType: String
@@ -38,7 +79,13 @@ class Response(
             Charset.forName("UTF-8")
         }
 
+    inline fun <reified T : Any> body() = this bodyTransformTo com.llnhhy.requester3.negotiation.typeOf<T>()
+
+    infix fun <T : Any> bodyTransformTo(info: TransformInfo<T>) = body?.let {
+        jsonDecoder.decodeFromBody<T>(info.type, it, charset)
+    }
+
     override fun toString(): String {
-        return "Response(urrequestInfo=$requestInfo, code=$code, headers=$headers, body=${if(body == null) "null" else "'${String(body, charset)}'"}, requestTime=$requestTime, responseTime=$responseTime)"
+        return "Response(urrequestInfo=$requestInfo, code=$code, headers=$headers, body=${if (body == null) "null" else "'${String(body, charset)}'"}, requestTime=$requestTime, responseTime=$responseTime)"
     }
 }
