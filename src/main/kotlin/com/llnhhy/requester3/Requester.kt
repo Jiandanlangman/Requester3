@@ -2,17 +2,14 @@ package com.llnhhy.requester3
 
 import com.llnhhy.requester3.config.Config
 import com.llnhhy.requester3.config.ConfigBuilder
-import com.llnhhy.requester3.core.OKHttpCore
-import com.llnhhy.requester3.core.RequesterCore
+import com.llnhhy.requester3.core.OKHttpCoreFactory
+import com.llnhhy.requester3.core.RequesterCoreFactory
 import com.llnhhy.requester3.interceptor.Interceptor
 import com.llnhhy.requester3.request.*
 import com.llnhhy.requester3.response.Response
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.X509TrustManager
-import javax.net.ssl.HostnameVerifier
 
 
 object Requester {
@@ -22,7 +19,7 @@ object Requester {
 
     private val customCoreMutex = Mutex()
 
-    private var core: RequesterCore? = null
+    private var coreFactory: RequesterCoreFactory? = null
 
     internal var config: Config = Config()
         private set
@@ -48,13 +45,14 @@ object Requester {
 
     }
 
-    infix fun core(builder: (SSLSocketFactory, X509TrustManager, HostnameVerifier, DNS) -> RequesterCore) = apply {
+    infix fun coreFactory(factory: RequesterCoreFactory) = apply {
         requesterScope.launch(Dispatchers.Default) {
             customCoreMutex.withLock {
-                core = builder(X509TrustManagerDelegate.getSslContext().socketFactory, X509TrustManagerDelegate, HostnameVerifierDelegate, DnsDelegate)
+                coreFactory = factory
             }
         }
     }
+
 
     infix fun config(builder: ConfigBuilder.() -> Unit) = apply {
         config = ConfigBuilder().apply(builder).build()
@@ -75,9 +73,7 @@ object Requester {
 
     private suspend fun coreCall(entity: RequestEntity): Response {
         val requesterCore = customCoreMutex.withLock {
-            core ?: OKHttpCore(X509TrustManagerDelegate.getSslContext().socketFactory, X509TrustManagerDelegate, HostnameVerifierDelegate, DnsDelegate).apply {
-                core = this
-            }
+            (coreFactory ?: OKHttpCoreFactory).getRequesterCore(X509TrustManagerDelegate.getSslContext().socketFactory, X509TrustManagerDelegate, HostnameVerifierDelegate, DnsDelegate)
         }
         return requesterCore.call(entity)
     }

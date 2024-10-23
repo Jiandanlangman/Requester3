@@ -23,7 +23,7 @@ import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.X509TrustManager
 import kotlin.collections.get
 
-class OKHttpCore(
+internal class OKHttpCore(
     sslSocketFactory: SSLSocketFactory,
     trustManager: X509TrustManager,
     hostnameVerifier: HostnameVerifier,
@@ -45,7 +45,6 @@ class OKHttpCore(
             }
 
         }
-//        .dispatcher(Dispatcher(Executors.newSingleThreadExecutor())) //TODO dispatcher
         .sslSocketFactory(sslSocketFactory, trustManager)
         .hostnameVerifier(hostnameVerifier)
         .dns(object : Dns {
@@ -150,6 +149,11 @@ class OKHttpCore(
         return sb.toString()
     }
 
+    fun close() {
+        httpClient.cache?.close()
+        httpClient.connectionPool.evictAll()
+        httpClient.dispatcher.executorService.shutdown()
+    }
 
     private fun unCompressGZIPData(src: ByteArray): ByteArray {
         val baos = ByteArrayOutputStream()
